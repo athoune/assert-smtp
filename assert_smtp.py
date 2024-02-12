@@ -1,6 +1,8 @@
 from base64 import b64encode
 import smtplib
 import ssl
+from dataclasses import dataclass
+from typing import Generator
 
 
 PORTS = [25, 465, 587]
@@ -18,7 +20,15 @@ def tls_then_starttls(
         return server, "smtp+starttls"
 
 
-def assert_smtp(host: str, user: str, password: str, ports: list[int] | None = None, context: ssl.SSLContext | None = None):
+@dataclass
+class Audit:
+    protocol: str
+    port: int
+    name: str
+    commands: list[bytes]
+
+
+def assert_smtp(host: str, user: str, password: str, ports: list[int] | None = None, context: ssl.SSLContext | None = None) -> Generator[Audit, None, None]:
     server: smtplib.SMTP | smtplib.SMTP_SSL
     status: int
     msg: bytes
@@ -35,13 +45,11 @@ def assert_smtp(host: str, user: str, password: str, ports: list[int] | None = N
         except TimeoutError:
             print(f"Timeout {host}:{port}")
             continue
-        print(f"{protocol}://{host}:{port} connected")
 
         status, msg = server.ehlo()
         assert status == 250
-        elho = msg.split(b"\n")
-        print(elho)
-        assert b"AUTH PLAIN" in elho
+        ehlo = msg.split(b"\n")
+        assert b"AUTH PLAIN" in ehlo
         # status, msg = server.login(user, password)
         # login method does exist, but doesn't handle UTF8 password
         # see https://github.com/python/cpython/issues/73936
@@ -49,11 +57,13 @@ def assert_smtp(host: str, user: str, password: str, ports: list[int] | None = N
             "AUTH PLAIN",
             b64encode(f"\0{user}\0{password}".encode("utf8")).decode("ascii"),
         )
+        yield Audit(protocol=protocol, port=port, name=ehlo[0].decode('utf8'), commands=ehlo[1:])
 
 
 if __name__ == "__main__":
     import os
 
-    t = assert_smtp(
+    for a in assert_smtp(
         os.getenv("SMTP_HOST"), os.getenv("SMTP_USER"), os.getenv("SMTP_PASSWORD")
-    )
+    ):
+        print(a)
