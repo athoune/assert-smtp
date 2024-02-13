@@ -74,7 +74,7 @@ if __name__ == "__main__":
         try:
             a = assert_smtp_auth(
                 host, os.getenv("SMTP_USER"), os.getenv("SMTP_PASSWORD"), port=port)
-        except TimeoutError:
+        except (TimeoutError, smtplib.SMTPServerDisconnected):
             print(f"Can't connect {host}:{port}")
         else:
             pprint(a)
