@@ -59,7 +59,12 @@ def assert_smtp_auth(host: str, user: str, password: str, port: int = 0, context
     status, msg = server.ehlo()
     assert status == 250
     ehlo = msg.split(b"\n")
-    assert b"AUTH PLAIN" in ehlo
+    auths = []
+    for option in ehlo:
+        if option.startswith(b"AUTH "):
+            auths = option.split(b" ")[1:]
+            break
+    assert b"PLAIN" in auths, f"PLAIN not in {auths}"
     status, msg = auth_plain_utf8(server, user, password)
     assert status == 235, f"wrong status {status} : {msg}"
     return Audit(protocol=protocol, port=port, name=ehlo[0].decode('utf8'), commands=ehlo[1:], cert=cert, cipher=cipher)
