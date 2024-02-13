@@ -12,7 +12,9 @@ def tls_then_starttls(
 ) -> tuple[smtplib.SMTP | smtplib.SMTP_SSL, str]:
     "Try to connect with TLS, and fallback to PLAIN+STARTTLS"
     try:
-        server = smtplib.SMTP_SSL(host=host, port=port, timeout=timeout, context=context)
+        server = smtplib.SMTP_SSL(
+            host=host, port=port, timeout=timeout, context=context
+        )
         return server, "smtps"
     except (ssl.SSLError, TimeoutError):
         print(f"smtps://{host}:{port} connection didn't work, lets try SMTP+STARTTLS")
@@ -28,7 +30,7 @@ class Audit:
     name: str
     commands: list[bytes]
     cipher: tuple[str, str, str] | None
-    cert: None # FIXME it's a _PeerCertRetDictType
+    cert: None  # FIXME it's a _PeerCertRetDictType
 
 
 class AuthentifcationFailure(BaseException):
@@ -48,7 +50,13 @@ def auth_plain_utf8(
     )
 
 
-def assert_smtp_auth(host: str, user: str, password: str, port: int = 0, context: ssl.SSLContext | None = None) -> Audit:
+def assert_smtp_auth(
+    host: str,
+    user: str,
+    password: str,
+    port: int = 0,
+    context: ssl.SSLContext | None = None,
+) -> Audit:
     "Connect to a SMTP server, with smtps or smtp+starttls and PLAIN AUTH"
     server: smtplib.SMTP | smtplib.SMTP_SSL
     status: int
@@ -58,7 +66,7 @@ def assert_smtp_auth(host: str, user: str, password: str, port: int = 0, context
         context = ssl.create_default_context()
     context.check_hostname = True
     server, protocol = tls_then_starttls(host, port=port, context=context)
-    ssl_sock = cast(ssl.SSLSocket, server.sock) # smtps or starttls : its a SSLSocket
+    ssl_sock = cast(ssl.SSLSocket, server.sock)  # smtps or starttls : its a SSLSocket
     cert = ssl_sock.getpeercert()
     cipher = ssl_sock.cipher()
 
