@@ -12,8 +12,9 @@ def tls_then_starttls(
 ) -> tuple[smtplib.SMTP | smtplib.SMTP_SSL, str]:
     "Try to connect with TLS, and fallback to PLAIN+STARTTLS"
     try:
-        return smtplib.SMTP_SSL(host=host, port=port, timeout=timeout, context=context), "smtps"
-    except (TimeoutError, ssl.SSLError):
+        server = smtplib.SMTP_SSL(host=host, port=port, timeout=timeout, context=context)
+        return server, "smtps"
+    except (ssl.SSLError, TimeoutError):
         print(f"smtps://{host}:{port} connection didn't work, lets try SMTP+STARTTLS")
         server = smtplib.SMTP(host=host, port=port, timeout=timeout)
         server.starttls(context=context)
