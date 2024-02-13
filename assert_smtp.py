@@ -31,7 +31,13 @@ class Audit:
     cert: None # FIXME it's a _PeerCertRetDictType
 
 
-def auth_plain_utf8(server:smtplib.SMTP | smtplib.SMTP_SSL, user: str, password: str) -> tuple[int, bytes]:
+class AuthentifcationFailure(BaseException):
+    pass
+
+
+def auth_plain_utf8(
+    server: smtplib.SMTP | smtplib.SMTP_SSL, user: str, password: str
+) -> tuple[int, bytes]:
     "PLAIN AUTH with UTF8"
     # status, msg = server.login(user, password)
     # login method does exist, but doesn't handle UTF8 password
@@ -66,8 +72,16 @@ def assert_smtp_auth(host: str, user: str, password: str, port: int = 0, context
             break
     assert b"PLAIN" in auths, f"PLAIN not in {auths}"
     status, msg = auth_plain_utf8(server, user, password)
-    assert status == 235, f"wrong status {status} : {msg}"
-    return Audit(protocol=protocol, port=port, name=ehlo[0].decode('utf8'), commands=ehlo[1:], cert=cert, cipher=cipher)
+    if status != 235:
+        raise AuthentifcationFailure(f"wrong status {status} : {msg.decode('utf8')}")
+    return Audit(
+        protocol=protocol,
+        port=port,
+        name=ehlo[0].decode("utf8"),
+        commands=ehlo[1:],
+        cert=cert,
+        cipher=cipher,
+    )
 
 
 if __name__ == "__main__":
@@ -78,8 +92,13 @@ if __name__ == "__main__":
     for port in PORTS:
         try:
             a = assert_smtp_auth(
-                host, os.getenv("SMTP_USER"), os.getenv("SMTP_PASSWORD"), port=port)
-        except (TimeoutError, smtplib.SMTPServerDisconnected):
-            print(f"Can't connect {host}:{port}")
+                host, os.getenv("SMTP_USER"), os.getenv("SMTP_PASSWORD"), port=port
+            )
+        except (
+            TimeoutError,
+            smtplib.SMTPServerDisconnected,
+            AuthentifcationFailure,
+        ) as e:
+            print(f"Can't connect {host}:{port} : {e}")
         else:
             pprint(a)
