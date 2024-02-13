@@ -20,3 +20,9 @@ The script tests the 3 SMTP ports :
  * 25 should not be used for mail transfer, but for server to server communication
  * 465 is no more registered for SMTP at IANA, but it was
  * 587 is the current official port for sending mails
+
+The script try to open an `smtps` connection (no, this protocol name is not yet normalized) and fallback to `smtp+starttls`.
+
+Authentication with `AUTH PLAIN` and UTF8 encoding.
+
+No mail is sent.
